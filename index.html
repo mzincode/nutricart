@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NutriCart — Macros + Groceries, Finally Together</title>
+  <meta name="description" content="NutriCart tracks your macros and micronutrients, then finds the cheapest products at your nearest store to hit your goals — all for $5.99/month."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2D6A4F;
+      --primary-foreground: #FAFAF7;
+      --accent: #F4A261;
+      --accent-foreground: #1A1A0E;
+      --secondary: #E8F5EE;
+      --background: #F7F5F0;
+      --foreground: #1C1C1A;
+      --muted: #EEEBE4;
+      --muted-foreground: #6B7264;
+      --card: #FFFFFF;
+      --border: rgba(0,0,0,0.09);
+      --border-light: rgba(255,255,255,0.6);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--background);
+      color: var(--foreground);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    .font-display { font-family: 'Playfair Display', serif; }
+
+    /* ── NAV ── */
+    header {
+      position: fixed;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      width: 92%;
+      max-width: 64rem;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.625rem 1rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border-light);
+      background: rgba(247,245,240,0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+    .nav-logo-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 14px;
+    }
+    .nav-logo-text { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 1rem; color: var(--foreground); }
+
+    .nav-links { display: flex; align-items: center; gap: 1.75rem; }
+    .nav-links a {
+      font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--foreground); }
+
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      padding: 0.625rem 1.25rem; border-radius: 9999px;
+      font-size: 0.875rem; font-weight: 600; text-decoration: none;
+      background: var(--primary); color: var(--primary-foreground);
+      transition: all 0.2s; border: none; cursor: pointer;
+    }
+    .nav-cta:hover { box-shadow: 0 8px 24px rgba(45,106,79,0.3); transform: translateY(-1px); }
+
+    .nav-mobile-btn {
+      display: none; width: 40px; height: 40px;
+      align-items: center; justify-content: center;
+      border-radius: 9999px; border: 1px solid var(--border);
+      background: var(--card); cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-cta.desktop { display: none; }
+      .nav-mobile-btn { display: flex; }
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 7rem 1rem 4rem;
+      overflow: hidden;
+    }
+
+    .blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(80px);
+      opacity: 0.35;
+      animation: blobFloat 8s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .blob-1 { background: #2D6A4F; width: 520px; height: 520px; top: -10%; left: -5%; }
+    .blob-2 { background: #F4A261; width: 440px; height: 440px; bottom: -5%; right: -8%; animation-delay: 3s; }
+    .blob-3 { background: #74B69A; width: 260px; height: 260px; top: 40%; right: 20%; animation-delay: 5s; }
+
+    @keyframes blobFloat {
+      0%, 100% { transform: translate(0,0) scale(1); }
+      33% { transform: translate(15px,-20px) scale(1.04); }
+      66% { transform: translate(-10px,12px) scale(0.97); }
+    }
+
+    .noise-overlay {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      opacity: 0.5;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    }
+
+    .hero-inner { position: relative; z-index: 10; max-width: 72rem; width: 100%; margin: 0 auto; }
+
+    .launch-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.375rem 1rem; border-radius: 9999px;
+      border: 1px solid rgba(45,106,79,0.2);
+      background: rgba(255,255,255,0.5);
+      backdrop-filter: blur(8px);
+      font-size: 0.875rem; color: var(--primary); font-weight: 500;
+      margin-bottom: 1.5rem;
+    }
+    .launch-dot {
+      width: 6px; height: 6px; border-radius: 9999px;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.4rem, 7vw, 6.5rem);
+      line-height: 0.92;
+      letter-spacing: -0.02em;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 .italic-light { font-style: italic; font-weight: 300; opacity: 0.6; }
+    .hero h1 .primary { color: var(--primary); }
+    .hero h1 .italic-em { font-style: italic; }
+
+    .hero-sub {
+      text-align: center; font-size: 1.125rem; color: var(--muted-foreground);
+      max-width: 40rem; margin: 0 auto 2rem; line-height: 1.7;
+    }
+
+    .price-pill {
+      display: inline-flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1.5rem; border-radius: 9999px;
+      background: rgba(45,106,79,0.1); border: 1px solid rgba(45,106,79,0.2);
+      margin-bottom: 2rem;
+    }
+    .price-pill .price { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 600; color: var(--primary); }
+    .price-pill .period { font-size: 0.875rem; color: var(--muted-foreground); }
+
+    .hero-ctas { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    @media (min-width: 640px) { .hero-ctas { flex-direction: row; justify-content: center; } }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 1rem 2rem; border-radius: 9999px; font-size: 1rem; font-weight: 600;
+      text-decoration: none; background: var(--primary); color: var(--primary-foreground);
+      transition: all 0.3s; white-space: nowrap; border: none; cursor: pointer;
+    }
+    .btn-primary:hover { box-shadow: 0 20px 40px rgba(45,106,79,0.25); transform: translateY(-2px); }
+    .btn-primary svg { transition: transform 0.2s; }
+    .btn-primary:hover svg { transform: translateX(4px); }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 1rem 2rem; border-radius: 9999px; font-size: 1rem; font-weight: 500;
+      text-decoration: none; border: 1px solid var(--border); background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(8px); color: var(--foreground);
+      transition: all 0.3s; white-space: nowrap; cursor: pointer;
+    }
+    .btn-secondary:hover { background: white; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+
+    .hero-note { text-align: center; font-size: 0.875rem; color: var(--muted-foreground); }
+
+    /* Hero Image */
+    .hero-image-wrap {
+      position: relative; z-index: 10; width: 100%; max-width: 64rem;
+      margin: 3.5rem auto 0; padding: 0 1rem;
+    }
+    .hero-image-inner {
+      position: relative; width: 100%;
+      height: clamp(320px, 45vw, 560px);
+      border-radius: 2.5rem; overflow: hidden;
+      border: 1px solid var(--border-light);
+      box-shadow: 0 40px 80px rgba(0,0,0,0.2);
+    }
+    .hero-image-inner img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .hero-image-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.2) 40%, transparent);
+    }
+
+    /* Float Cards */
+    .float-card {
+      position: absolute;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(247,245,240,0.88);
+      border: 1px solid rgba(255,255,255,0.7);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      animation: floatCard 6s ease-in-out infinite;
+    }
+    .float-card-2 { animation-delay: 2s; }
+    @keyframes floatCard {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .macros-card { bottom: 1.5rem; left: 2.5rem; border-radius: 1rem; padding: 1.25rem; width: 16rem; }
+    .macros-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .macros-card-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted-foreground); font-weight: 600; margin-bottom: 2px; }
+    .macros-card-value { font-family: 'Playfair Display', serif; font-size: 0.9rem; font-weight: 500; }
+    .macros-icon { width: 36px; height: 36px; border-radius: 9999px; background: var(--secondary); display: flex; align-items: center; justify-content: center; color: var(--primary); }
+    .macro-row { margin-bottom: 0.625rem; }
+    .macro-row-top { display: flex; justify-content: space-between; font-size: 0.6875rem; margin-bottom: 4px; }
+    .macro-row-label { color: var(--muted-foreground); font-weight: 500; }
+    .macro-row-val { font-weight: 600; }
+    .macro-bar-bg { height: 6px; width: 100%; border-radius: 9999px; background: var(--muted); }
+    .macro-bar { height: 100%; border-radius: 9999px; transition: width 0.5s; }
+
+    .gaps-card { top: 1.5rem; right: 2.5rem; border-radius: 1rem; padding: 1rem; width: 14rem; }
+    .gaps-title { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted-foreground); font-weight: 600; margin-bottom: 0.75rem; }
+    .gap-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.625rem; }
+    .gap-item:last-child { margin-bottom: 0; }
+    .gap-name { font-size: 0.75rem; font-weight: 600; }
+    .gap-source { font-size: 0.6875rem; color: var(--muted-foreground); }
+    .gap-price { font-size: 0.75rem; font-weight: 700; color: var(--primary); text-align: right; }
+    .gap-store { font-size: 0.625rem; color: var(--muted-foreground); text-align: right; }
+
+    @media (max-width: 640px) {
+      .macros-card { left: 1rem; width: 13rem; }
+      .gaps-card { right: 1rem; width: 11rem; }
+    }
+
+    /* ── SECTION COMMON ── */
+    section { padding: 5rem 1rem; }
+    .section-tag { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3em; color: var(--muted-foreground); font-weight: 600; display: block; margin-bottom: 0.75rem; }
+    .section-title { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3.75rem); line-height: 1.05; letter-spacing: -0.02em; }
+    .section-title .italic-light { font-style: italic; font-weight: 300; color: var(--muted-foreground); }
+    .section-title .primary { color: var(--primary); }
+    .container { max-width: 72rem; margin: 0 auto; }
+
+    /* ── PROBLEM SECTION ── */
+    .problem-section { background: white; }
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 3.5rem; align-items: stretch; }
+    @media (max-width: 900px) { .problem-grid { grid-template-columns: 1fr; } }
+
+    .problem-card {
+      border-radius: 2rem; border: 1px solid var(--border); background: var(--card);
+      padding: 2rem; display: flex; flex-direction: column;
+    }
+    .problem-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .status-dot { width: 8px; height: 8px; border-radius: 9999px; }
+    .status-dot.red { background: #F87171; }
+    .status-dot.green { background: var(--accent); }
+    .card-label { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.1em; }
+
+    .app-row {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1rem; border-radius: 0.75rem;
+      border: 1px solid var(--border); background: var(--background);
+      margin-bottom: 0.75rem;
+    }
+    .app-emoji { font-size: 1.5rem; }
+    .app-info { flex: 1; }
+    .app-name { font-weight: 600; font-size: 0.875rem; }
+    .app-desc { font-size: 0.75rem; color: var(--muted-foreground); }
+    .app-badge {
+      font-size: 0.6875rem; padding: 0.25rem 0.625rem; border-radius: 9999px;
+      background: #FEF2F2; color: #EF4444; border: 1px solid #FECACA; font-weight: 500;
+    }
+
+    .problem-note {
+      margin-top: 1.5rem; padding: 1rem; border-radius: 0.75rem;
+      background: #FEF2F2; border: 1px solid #FECACA;
+      font-size: 0.875rem; color: #B91C1C; font-weight: 500;
+    }
+
+    .solution-card {
+      border-radius: 2rem; padding: 2rem; display: flex; flex-direction: column;
+      position: relative; overflow: hidden; background: var(--primary);
+    }
+    .solution-card-blob {
+      position: absolute; top: 0; right: 0; width: 16rem; height: 16rem;
+      border-radius: 9999px; background: #74B69A; filter: blur(60px);
+      transform: translate(30%,-30%); opacity: 0.2; pointer-events: none;
+    }
+    .solution-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; position: relative; z-index: 1; }
+    .solution-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(250,250,247,0.7); }
+
+    .solution-stat {
+      padding: 1.25rem; border-radius: 0.75rem; margin-bottom: 0.75rem;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+      position: relative; z-index: 1;
+    }
+    .solution-number { font-family: 'Playfair Display', serif; font-size: 1.875rem; font-weight: 600; color: var(--accent); }
+    .solution-stat-label { font-size: 0.875rem; font-weight: 500; color: rgba(250,250,247,0.85); margin-left: 0.75rem; }
+    .solution-stat-row { display: flex; align-items: baseline; gap: 0; margin-bottom: 0.25rem; }
+    .solution-stat-sub { font-size: 0.6875rem; color: rgba(250,250,247,0.55); }
+
+    .solution-note {
+      margin-top: 1.5rem; padding: 1rem; border-radius: 0.75rem; position: relative; z-index: 1;
+      background: rgba(244,162,97,0.2); border: 1px solid rgba(244,162,97,0.3);
+      font-size: 0.875rem; font-weight: 500; color: var(--accent);
+    }
+
+    /* ── FEATURES ── */
+    .features-section { background: var(--background); }
+    .bento-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1.25rem; margin-top: 3rem;
+      grid-template-rows: auto auto;
+    }
+    @media (max-width: 768px) { .bento-grid { grid-template-columns: 1fr; } }
+
+    .bento-card {
+      border-radius: 2rem; border: 1px solid var(--border); background: var(--card);
+      padding: 1.75rem; display: flex; flex-direction: column;
+    }
+    .bento-card.tall { grid-row: span 2; }
+    .bento-card.accent-bg { background: var(--accent); border-color: transparent; }
+    .bento-card.primary-bg { background: var(--primary); border-color: transparent; }
+
+    .bento-icon {
+      width: 36px; height: 36px; border-radius: 0.75rem;
+      background: var(--secondary); display: flex; align-items: center; justify-content: center;
+      color: var(--primary); margin-bottom: 1rem;
+    }
+    .bento-icon.white { background: rgba(255,255,255,0.25); color: white; }
+    .bento-tag { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted-foreground); font-weight: 600; margin-bottom: 0.75rem; }
+    .bento-title { font-family: 'Playfair Display', serif; font-size: 1.375rem; font-weight: 500; margin-bottom: 0.5rem; line-height: 1.3; }
+    .bento-title.white { color: white; }
+    .bento-desc { font-size: 0.875rem; color: var(--muted-foreground); line-height: 1.6; margin-bottom: 1.5rem; }
+    .bento-desc.white { color: rgba(250,250,247,0.75); }
+
+    .nutrient-item {
+      padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border);
+      background: var(--background); margin-bottom: 0.75rem;
+    }
+    .nutrient-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .nutrient-dot { width: 8px; height: 8px; border-radius: 9999px; background: #F87171; }
+    .nutrient-name { font-size: 0.875rem; font-weight: 600; }
+    .nutrient-pct {
+      font-size: 0.625rem; padding: 0.125rem 0.5rem; border-radius: 9999px;
+      background: #FEF2F2; color: #EF4444; border: 1px solid #FECACA; font-weight: 500;
+    }
+    .nutrient-bar-bg { height: 6px; width: 100%; border-radius: 9999px; background: var(--muted); margin-bottom: 0.75rem; }
+    .nutrient-bar { height: 100%; border-radius: 9999px; background: #FCA5A5; }
+    .nutrient-product { display: flex; align-items: center; justify-content: space-between; }
+    .nutrient-product-name { font-size: 0.75rem; font-weight: 600; }
+    .nutrient-product-store { font-size: 0.6875rem; color: var(--muted-foreground); }
+    .nutrient-price { font-size: 0.875rem; font-weight: 700; color: var(--primary); text-align: right; }
+    .nutrient-cheapest { font-size: 0.625rem; color: var(--muted-foreground); text-align: right; }
+
+    .budget-bar-wrap {
+      margin-top: 1.25rem; padding: 0.875rem; border-radius: 0.75rem;
+      background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+    }
+    .budget-bar-top { display: flex; justify-content: space-between; font-size: 0.75rem; color: white; font-weight: 500; margin-bottom: 0.375rem; }
+    .budget-bar-bg { height: 8px; width: 100%; border-radius: 9999px; background: rgba(255,255,255,0.3); }
+    .budget-bar-fill { height: 100%; border-radius: 9999px; background: white; width: 94%; }
+    .budget-remaining { font-size: 0.6875rem; color: rgba(255,255,255,0.7); margin-top: 0.375rem; }
+
+    .grocery-btns { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+    .grocery-btn {
+      flex: 1; padding: 0.625rem; border-radius: 0.75rem; font-size: 0.75rem;
+      font-weight: 700; text-align: center; cursor: pointer; border: none;
+      transition: transform 0.2s;
+    }
+    .grocery-btn:hover { transform: scale(1.03); }
+    .grocery-btn.white-btn { background: white; color: var(--primary); }
+    .grocery-btn.outline-btn { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; }
+
+    /* ── HOW IT WORKS ── */
+    .how-section { background: var(--muted); }
+    .tabs { display: flex; align-items: center; gap: 0.5rem; justify-content: center; margin-bottom: 2.5rem; flex-wrap: wrap; }
+    .tab {
+      padding: 0.625rem 1.5rem; border-radius: 9999px; font-size: 0.875rem;
+      font-weight: 600; cursor: pointer; transition: all 0.3s; border: none;
+    }
+    .tab.active { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 4px 16px rgba(45,106,79,0.3); }
+    .tab.inactive { background: transparent; color: var(--muted-foreground); border: 1px solid var(--border); }
+    .tab.inactive:hover { background: var(--card); }
+    .tab-num { opacity: 0.5; margin-right: 0.375rem; }
+
+    .step-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
+    @media (max-width: 768px) { .step-grid { grid-template-columns: 1fr; } }
+
+    .step-number { font-family: 'Playfair Display', serif; font-size: 4rem; font-weight: 300; color: var(--border); display: block; margin-bottom: 0.75rem; line-height: 1; }
+    .step-title { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 2.5vw, 1.875rem); font-weight: 500; margin-bottom: 1rem; line-height: 1.3; }
+    .step-desc { font-size: 1rem; color: var(--muted-foreground); line-height: 1.7; }
+
+    .food-log { background: var(--card); border-radius: 1rem; padding: 1.5rem; border: 1px solid var(--border); }
+    .food-log-title { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted-foreground); font-weight: 600; margin-bottom: 1rem; }
+    .food-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem; border-radius: 0.75rem; border: 1px solid var(--border);
+      background: var(--background); margin-bottom: 0.75rem;
+    }
+    .food-item-name { font-weight: 600; font-size: 0.875rem; }
+    .food-item-foods { font-size: 0.75rem; color: var(--muted-foreground); }
+    .food-item-cal { font-size: 0.875rem; font-weight: 700; text-align: right; }
+    .food-item-prot { font-size: 0.75rem; color: var(--muted-foreground); text-align: right; }
+    .food-alert {
+      padding: 0.75rem; border-radius: 0.75rem; margin-top: 1rem;
+      background: var(--secondary); border: 1px solid rgba(45,106,79,0.2);
+      font-size: 0.75rem; font-weight: 600; color: var(--primary);
+    }
+
+    /* ── WAITLIST ── */
+    .waitlist-section { background: var(--background); }
+    .waitlist-card {
+      border-radius: 2.5rem; padding: 2.5rem 2rem; position: relative; overflow: hidden;
+      background: var(--primary);
+    }
+    @media (min-width: 768px) { .waitlist-card { padding: 4rem; } }
+    .waitlist-blob-1 {
+      position: absolute; top: 0; right: 0; width: 20rem; height: 20rem;
+      border-radius: 9999px; background: #74B69A; filter: blur(80px);
+      transform: translate(30%,-30%); opacity: 0.15; pointer-events: none;
+    }
+    .waitlist-blob-2 {
+      position: absolute; bottom: 0; left: 0; width: 16rem; height: 16rem;
+      border-radius: 9999px; background: var(--accent); filter: blur(70px);
+      transform: translate(-20%,30%); opacity: 0.2; pointer-events: none;
+    }
+    .waitlist-inner { position: relative; z-index: 1; }
+
+    .waitlist-price-pill {
+      display: inline-flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1.5rem; border-radius: 9999px;
+      background: rgba(244,162,97,0.2); border: 1px solid rgba(244,162,97,0.4);
+      margin-bottom: 1.5rem;
+    }
+    .waitlist-price { font-family: 'Playfair Display', serif; font-size: 1.875rem; font-weight: 600; color: var(--accent); }
+    .waitlist-period { font-size: 0.875rem; color: rgba(250,250,247,0.8); font-weight: 500; }
+
+    .waitlist-h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 4rem);
+      line-height: 1.0; letter-spacing: -0.02em;
+      color: white; text-align: center; margin-bottom: 1rem;
+    }
+    .waitlist-h2 .italic-light { font-style: italic; font-weight: 300; opacity: 0.7; }
+
+    .waitlist-sub { text-align: center; font-size: 1rem; color: rgba(250,250,247,0.65); max-width: 36rem; margin: 0 auto 2.5rem; line-height: 1.7; }
+
+    .waitlist-ctas { display: flex; flex-direction: column; align-items: center; gap: 1rem; justify-content: center; margin-bottom: 2rem; }
+    @media (min-width: 640px) { .waitlist-ctas { flex-direction: row; } }
+
+    .btn-accent {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 1rem 2rem; border-radius: 9999px; font-size: 1rem; font-weight: 700;
+      background: var(--accent); color: var(--accent-foreground);
+      text-decoration: none; border: none; cursor: pointer; transition: all 0.3s;
+    }
+    .btn-accent:hover { box-shadow: 0 20px 40px rgba(244,162,97,0.4); transform: translateY(-2px); }
+    .btn-accent svg { transition: transform 0.2s; }
+    .btn-accent:hover svg { transform: translateX(4px); }
+
+    .notify-form { max-width: 28rem; margin: 0 auto; }
+    .notify-row { display: flex; flex-direction: column; gap: 0.75rem; }
+    @media (min-width: 640px) { .notify-row { flex-direction: row; } }
+
+    .notify-input {
+      flex: 1; padding: 0.875rem 1.25rem; border-radius: 9999px;
+      font-size: 0.875rem; border: none; outline: none;
+      background: rgba(255,255,255,0.15); color: white;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .notify-input::placeholder { color: rgba(250,250,247,0.5); }
+    .notify-input:focus { box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
+
+    .btn-notify {
+      padding: 0.875rem 1.5rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.3); color: white; background: transparent;
+      cursor: pointer; white-space: nowrap; transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+    }
+    .btn-notify:hover { background: rgba(255,255,255,0.1); }
+    .notify-note { text-align: center; font-size: 0.75rem; color: rgba(250,250,247,0.45); margin-top: 0.75rem; }
+
+    .trust-badges {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem;
+      margin-top: 2.5rem; padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .trust-item { display: flex; align-items: center; gap: 0.5rem; }
+    .trust-text { font-size: 0.75rem; font-weight: 500; color: rgba(250,250,247,0.6); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 4rem 1rem;
+    }
+    .footer-inner { max-width: 64rem; margin: 0 auto; }
+    .footer-top {
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+      gap: 1.5rem; margin-bottom: 2rem;
+    }
+    @media (min-width: 768px) { .footer-top { flex-direction: row; } }
+
+    .footer-brand { display: flex; align-items: center; gap: 0.5rem; }
+    .footer-brand-icon {
+      width: 28px; height: 28px; border-radius: 6px; background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 12px;
+    }
+    .footer-brand-name { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 1rem; }
+
+    .footer-nav { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; justify-content: center; }
+    .footer-nav a {
+      font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground);
+      text-decoration: none; padding: 0.25rem 0.5rem; min-height: 44px;
+      display: flex; align-items: center; transition: color 0.2s;
+    }
+    .footer-nav a:hover { color: var(--foreground); }
+    .footer-sep { color: var(--border); font-size: 0.875rem; user-select: none; }
+
+    .footer-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1rem; }
+    @media (max-width: 768px) { .footer-right { align-items: center; } }
+    .social-links { display: flex; align-items: center; gap: 0.75rem; }
+    .social-link {
+      width: 36px; height: 36px; border-radius: 9999px; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted-foreground); text-decoration: none; transition: all 0.2s;
+    }
+    .social-link:hover { color: var(--foreground); border-color: var(--foreground); }
+    .footer-copy { font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+    .footer-disclaimer { text-align: center; font-size: 0.75rem; color: var(--muted-foreground); }
+
+    /* ── REVEAL ANIMATIONS ── */
+    .reveal { opacity: 0; transform: translateY(2rem); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal.delay-1 { transition-delay: 0.1s; }
+    .reveal.delay-2 { transition-delay: 0.2s; }
+    .reveal.delay-3 { transition-delay: 0.3s; }
+
+    /* Step panels */
+    .step-panel { display: none; }
+    .step-panel.active { display: grid; }
+
+    /* center helpers */
+    .text-center { text-align: center; }
+    .flex-center { display: flex; justify-content: center; }
+    .mb-14 { margin-bottom: 3.5rem; }
+    .mb-12 { margin-bottom: 3rem; }
+
+    /* Blob card animations already defined; add relative z-index */
+    .bento-card.accent-bg .bento-blob,
+    .bento-card.primary-bg .bento-blob {
+      position: absolute; border-radius: 9999px; filter: blur(50px); opacity: 0.3; pointer-events: none;
+    }
+    .bento-card { position: relative; overflow: hidden; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<header>
+  <nav>
+    <a class="nav-logo" href="#">
+      <div class="nav-logo-icon">N</div>
+      <span class="nav-logo-text">NutriCart</span>
+    </a>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#waitlist">Pricing</a>
+    </div>
+    <a href="#waitlist" class="nav-cta desktop">Join Waitlist</a>
+    <button class="nav-mobile-btn" aria-label="Open menu">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="noise-overlay"></div>
+
+  <div class="hero-inner">
+    <div class="flex-center" style="margin-bottom:1.5rem;">
+      <span class="launch-badge">
+        <span class="launch-dot"></span>
+        Launching soon · Join the waitlist
+      </span>
+    </div>
+
+    <h1 class="font-display">
+      You use Cronometer<br/>
+      <span class="italic-light">for nutrition.</span> Instacart<br/>
+      <span class="italic-light">for groceries.</span><br/>
+      <span class="primary">Neither talks to the other.</span><br/>
+      <span class="italic-em">We're fixing that.</span>
+    </h1>
+
+    <p class="hero-sub">
+      One app that tracks your macros, micronutrients, and food budget — then shows you the cheapest products at your nearest store to hit your goals.
+    </p>
+
+    <div class="flex-center" style="margin-bottom:2rem;">
+      <div class="price-pill">
+        <span class="price">$5.99</span>
+        <span class="period">/month · Cancel anytime</span>
+      </div>
+    </div>
+
+    <div class="hero-ctas">
+      <a href="#waitlist" id="hero-paid-cta" class="btn-primary">
+        Join Waitlist — $5.99/mo
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+      </a>
+      <a href="#notify" class="btn-secondary">Notify me when it launches (free)</a>
+    </div>
+    <p class="hero-note">You won't be charged today. We'll email you when we launch.</p>
+  </div>
+
+  <!-- Hero Image -->
+  <div class="hero-image-wrap">
+    <div class="hero-image-inner">
+      <img src="https://images.unsplash.com/photo-1664138303860-11d1abbbc1ee?w=1200&q=80" alt="Bright well-lit grocery store produce aisle with colorful fresh vegetables and fruits"/>
+      <div class="hero-image-overlay"></div>
+
+      <!-- Macros Card -->
+      <div class="float-card macros-card">
+        <div class="macros-card-header">
+          <div>
+            <p class="macros-card-label">Today's Macros</p>
+            <p class="macros-card-value font-display">1,847 / 2,200 kcal</p>
+          </div>
+          <div class="macros-icon">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+        </div>
+        <div class="macro-row">
+          <div class="macro-row-top"><span class="macro-row-label">Protein</span><span class="macro-row-val">68g</span></div>
+          <div class="macro-bar-bg"><div class="macro-bar" style="width:56.7%;background:#2D6A4F;"></div></div>
+        </div>
+        <div class="macro-row">
+          <div class="macro-row-top"><span class="macro-row-label">Carbs</span><span class="macro-row-val">142g</span></div>
+          <div class="macro-bar-bg"><div class="macro-bar" style="width:71%;background:#F4A261;"></div></div>
+        </div>
+        <div class="macro-row" style="margin-bottom:0;">
+          <div class="macro-row-top"><span class="macro-row-label">Fat</span><span class="macro-row-val">31g</span></div>
+          <div class="macro-bar-bg"><div class="macro-bar" style="width:47.7%;background:#74B69A;"></div></div>
+        </div>
+      </div>
+
+      <!-- Gaps Card -->
+      <div class="float-card float-card-2 gaps-card">
+        <p class="gaps-title">Fix These Gaps →</p>
+        <div class="gap-item">
+          <div><p class="gap-name">Vitamin D</p><p class="gap-source">Kirkland Salmon</p></div>
+          <div><p class="gap-price">$8.49</p><p class="gap-store">Costco</p></div>
+        </div>
+        <div class="gap-item">
+          <div><p class="gap-name">Magnesium</p><p class="gap-source">Simple Truth Spinach</p></div>
+          <div><p class="gap-price">$3.29</p><p class="gap-store">Kroger</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem-section">
+  <div class="container">
+    <div class="text-center mb-14 reveal">
+      <span class="section-tag">The Problem</span>
+      <h2 class="section-title">Two apps. Zero <span class="italic-light">connection.</span></h2>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card reveal delay-1">
+        <div class="problem-card-header">
+          <span class="status-dot red"></span>
+          <span class="card-label">Before NutriCart</span>
+        </div>
+        <div>
+          <div class="app-row">
+            <span class="app-emoji">📊</span>
+            <div class="app-info"><p class="app-name">Cronometer</p><p class="app-desc">Track nutrition</p></div>
+            <span class="app-badge">No grocery link</span>
+          </div>
+          <div class="app-row">
+            <span class="app-emoji">🛒</span>
+            <div class="app-info"><p class="app-name">Instacart</p><p class="app-desc">Order groceries</p></div>
+            <span class="app-badge">No macro data</span>
+          </div>
+          <div class="app-row" style="margin-bottom:0;">
+            <span class="app-emoji">📋</span>
+            <div class="app-info"><p class="app-name">Spreadsheet</p><p class="app-desc">Calculate budget</p></div>
+            <span class="app-badge">Manual &amp; slow</span>
+          </div>
+        </div>
+        <div class="problem-note">Average time wasted cross-referencing apps: <strong>23 min/week</strong></div>
+      </div>
+
+      <div class="solution-card reveal delay-2">
+        <div class="solution-card-blob"></div>
+        <div class="solution-card-header">
+          <span class="status-dot" style="background:var(--accent);"></span>
+          <span class="solution-label">With NutriCart</span>
+        </div>
+        <div class="solution-stat">
+          <div class="solution-stat-row">
+            <span class="solution-number">47g</span>
+            <span class="solution-stat-label">Protein gap today</span>
+          </div>
+          <p class="solution-stat-sub">Simple Truth Greek Yogurt · $2.99 · Kroger</p>
+        </div>
+        <div class="solution-stat">
+          <div class="solution-stat-row">
+            <span class="solution-number">$6.12</span>
+            <span class="solution-stat-label">Saved vs. your usual picks</span>
+          </div>
+          <p class="solution-stat-sub">Budget mode found cheaper equivalents</p>
+        </div>
+        <div class="solution-stat">
+          <div class="solution-stat-row">
+            <span class="solution-number">1-tap</span>
+            <span class="solution-stat-label">Sent to Instacart</span>
+          </div>
+          <p class="solution-stat-sub">Grocery list pushed in under 3 seconds</p>
+        </div>
+        <div class="solution-note">Everything in one dashboard. Grocery list ready in seconds.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="features-section">
+  <div class="container">
+    <div class="text-center mb-12 reveal">
+      <span class="section-tag">What NutriCart Does</span>
+      <h2 class="section-title">Three problems. <span class="italic-light" style="color:var(--primary);">One fix.</span></h2>
+    </div>
+    <div class="bento-grid">
+
+      <!-- Nutrient Gaps — tall card -->
+      <div class="bento-card tall reveal delay-1">
+        <div class="bento-icon">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
+        <span class="bento-tag">Nutrient Gaps</span>
+        <h3 class="bento-title font-display">See what you're missing — and exactly which product fixes it</h3>
+        <p class="bento-desc">NutriCart scans your daily log, identifies micronutrient shortfalls, and surfaces the cheapest in-stock product at your nearest Kroger or Costco to close the gap.</p>
+        <div style="flex:1;">
+          <div class="nutrient-item">
+            <div class="nutrient-header">
+              <span class="nutrient-dot"></span>
+              <span class="nutrient-name">Vitamin D</span>
+              <span class="nutrient-pct">22% of goal</span>
+            </div>
+            <div class="nutrient-bar-bg"><div class="nutrient-bar" style="width:22%;"></div></div>
+            <div class="nutrient-product">
+              <div><p class="nutrient-product-name">Kirkland Wild Salmon</p><p class="nutrient-product-store">Costco</p></div>
+              <div><p class="nutrient-price">$8.49</p><p class="nutrient-cheapest">cheapest match</p></div>
+            </div>
+          </div>
+          <div class="nutrient-item">
+            <div class="nutrient-header">
+              <span class="nutrient-dot"></span>
+              <span class="nutrient-name">Magnesium</span>
+              <span class="nutrient-pct">45% of goal</span>
+            </div>
+            <div class="nutrient-bar-bg"><div class="nutrient-bar" style="width:45%;"></div></div>
+            <div class="nutrient-product">
+              <div><p class="nutrient-product-name">Simple Truth Baby Spinach</p><p class="nutrient-product-store">Kroger</p></div>
+              <div><p class="nutrient-price">$3.29</p><p class="nutrient-cheapest">cheapest match</p></div>
+            </div>
+          </div>
+          <div class="nutrient-item">
+            <div class="nutrient-header">
+              <span class="nutrient-dot"></span>
+              <span class="nutrient-name">Iron</span>
+              <span class="nutrient-pct">38% of goal</span>
+            </div>
+            <div class="nutrient-bar-bg"><div class="nutrient-bar" style="width:38%;"></div></div>
+            <div class="nutrient-product">
+              <div><p class="nutrient-product-name">Organic Lentils 1lb</p><p class="nutrient-product-store">Kroger</p></div>
+              <div><p class="nutrient-price">$2.19</p><p class="nutrient-cheapest">cheapest match</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget card -->
+      <div class="bento-card accent-bg reveal delay-2">
+        <div style="position:absolute;bottom:0;right:0;width:12rem;height:12rem;border-radius:9999px;background:#E8753A;filter:blur(50px);transform:translate(30%,30%);opacity:0.3;pointer-events:none;"></div>
+        <div class="bento-icon white">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h3 class="bento-title font-display white">Set a weekly food budget. Hit your macros without blowing it.</h3>
+        <p class="bento-desc white">Tell NutriCart your weekly grocery budget. It builds meal plans that hit your protein, carb, and fat targets using the cheapest available products — no guesswork.</p>
+        <div class="budget-bar-wrap">
+          <div class="budget-bar-top"><span>Weekly Budget</span><span>$85 / $90</span></div>
+          <div class="budget-bar-bg"><div class="budget-bar-fill"></div></div>
+          <p class="budget-remaining">$5.00 remaining · 3 days left</p>
+        </div>
+      </div>
+
+      <!-- Grocery push card -->
+      <div class="bento-card primary-bg reveal delay-3">
+        <div style="position:absolute;top:0;left:0;width:10rem;height:10rem;border-radius:9999px;background:#74B69A;filter:blur(45px);transform:translate(-20%,-20%);opacity:0.2;pointer-events:none;"></div>
+        <div class="bento-icon white">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </div>
+        <h3 class="bento-title font-display white">Push your grocery list to Instacart or Kroger in one tap</h3>
+        <p class="bento-desc white" style="flex:1;">No copying. No switching apps. Your NutriCart list goes directly to your cart — Instacart or Kroger, your choice.</p>
+        <div class="grocery-btns">
+          <button class="grocery-btn white-btn">→ Instacart</button>
+          <button class="grocery-btn outline-btn">→ Kroger</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="how-section">
+  <div class="container">
+    <div class="text-center mb-12 reveal">
+      <span class="section-tag">How It Works</span>
+      <h2 class="section-title">Track. Match. <span class="italic-light" style="color:var(--primary);">Shop.</span></h2>
+    </div>
+
+    <div class="tabs reveal delay-1">
+      <button class="tab active" data-step="1"><span class="tab-num">01</span>Track</button>
+      <button class="tab inactive" data-step="2"><span class="tab-num">02</span>Match</button>
+      <button class="tab inactive" data-step="3"><span class="tab-num">03</span>Shop</button>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="step-panel active step-grid reveal delay-2" data-panel="1">
+      <div>
+        <span class="step-number font-display">01</span>
+        <h3 class="step-title font-display">Log your food — or import from Cronometer</h3>
+        <p class="step-desc">NutriCart reads your daily food log and calculates exactly which nutrients you're hitting and missing. No manual entry if you already use Cronometer.</p>
+      </div>
+      <div>
+        <div class="food-log">
+          <p class="food-log-title">Today's Log</p>
+          <div class="food-item">
+            <div><p class="food-item-name">Breakfast</p><p class="food-item-foods">Oats, banana, almond milk</p></div>
+            <div><p class="food-item-cal">420 kcal</p><p class="food-item-prot">12g protein</p></div>
+          </div>
+          <div class="food-item">
+            <div><p class="food-item-name">Lunch</p><p class="food-item-foods">Chicken breast, brown rice</p></div>
+            <div><p class="food-item-cal">610 kcal</p><p class="food-item-prot">44g protein</p></div>
+          </div>
+          <div class="food-item">
+            <div><p class="food-item-name">Snack</p><p class="food-item-foods">Greek yogurt</p></div>
+            <div><p class="food-item-cal">130 kcal</p><p class="food-item-prot">17g protein</p></div>
+          </div>
+          <div class="food-alert">Vitamin D: only 22% of goal today</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step-panel step-grid" data-panel="2">
+      <div>
+        <span class="step-number font-display">02</span>
+        <h3 class="step-title font-display">Match gaps to the cheapest products near you</h3>
+        <p class="step-desc">NutriCart scans real-time inventory at Kroger and Costco near you, then finds the most cost-effective product to fill each nutrient gap in your log.</p>
+      </div>
+      <div>
+        <div class="food-log">
+          <p class="food-log-title">Gap Matches</p>
+          <div class="food-item">
+            <div><p class="food-item-name">Vitamin D gap</p><p class="food-item-foods">Kirkland Wild Salmon · Costco</p></div>
+            <div><p class="food-item-cal" style="color:var(--primary);">$8.49</p><p class="food-item-prot">Best price</p></div>
+          </div>
+          <div class="food-item">
+            <div><p class="food-item-name">Magnesium gap</p><p class="food-item-foods">Baby Spinach · Kroger</p></div>
+            <div><p class="food-item-cal" style="color:var(--primary);">$3.29</p><p class="food-item-prot">Best price</p></div>
+          </div>
+          <div class="food-item">
+            <div><p class="food-item-name">Iron gap</p><p class="food-item-foods">Organic Lentils · Kroger</p></div>
+            <div><p class="food-item-cal" style="color:var(--primary);">$2.19</p><p class="food-item-prot">Best price</p></div>
+          </div>
+          <div class="food-alert">Total to close all gaps: $13.97</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step-panel step-grid" data-panel="3">
+      <div>
+        <span class="step-number font-display">03</span>
+        <h3 class="step-title font-display">One tap sends your list to Instacart or Kroger</h3>
+        <p class="step-desc">No copying and pasting. No app-switching. Your complete grocery list — with matched products — lands directly in your Instacart or Kroger cart in under 3 seconds.</p>
+      </div>
+      <div>
+        <div class="food-log">
+          <p class="food-log-title">Ready to Send</p>
+          <div class="food-item">
+            <div><p class="food-item-name">3 items</p><p class="food-item-foods">All gaps covered</p></div>
+            <div><p class="food-item-cal" style="color:var(--primary);">$13.97</p><p class="food-item-prot">Total</p></div>
+          </div>
+          <div class="grocery-btns" style="margin-top:1rem;">
+            <button class="grocery-btn" style="background:var(--primary);color:white;">→ Send to Instacart</button>
+            <button class="grocery-btn" style="background:var(--secondary);color:var(--primary);border:1px solid rgba(45,106,79,0.2);">→ Send to Kroger</button>
+          </div>
+          <div class="food-alert" style="margin-top:0.75rem;">Cart updated in 2.4 seconds ✓</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAITLIST -->
+<section id="waitlist" class="waitlist-section">
+  <div class="container">
+    <div class="waitlist-card">
+      <div class="waitlist-blob-1"></div>
+      <div class="waitlist-blob-2"></div>
+      <div class="waitlist-inner">
+        <div class="flex-center" style="margin-bottom:1.5rem;">
+          <div class="waitlist-price-pill">
+            <span class="waitlist-price font-display">$5.99</span>
+            <span class="waitlist-period">/month · Cancel anytime</span>
+          </div>
+        </div>
+
+        <h2 class="waitlist-h2 font-display">
+          Stop switching apps.<br/>
+          <span class="italic-light">Start eating better</span><br/>
+          for less.
+        </h2>
+
+        <p class="waitlist-sub">One app that tracks your macros, finds the cheapest grocery fix, and pushes your list to Instacart or Kroger in one tap.</p>
+
+        <div class="waitlist-ctas">
+          <a href="#" id="waitlist-paid-cta" class="btn-accent">
+            Join Waitlist — $5.99/mo
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+          </a>
+        </div>
+
+        <div id="notify" class="notify-form">
+          <form id="notify-form" class="notify-row">
+            <input id="notify-email" type="email" class="notify-input" placeholder="your@email.com" required/>
+            <button type="submit" id="notify-btn" class="btn-notify">Notify me (free)</button>
+          </form>
+          <p id="notify-msg" class="notify-note">You won't be charged today. We'll email you when we launch.</p>
+        </div>
+
+        <div class="trust-badges">
+          <div class="trust-item"><span>🔒</span><span class="trust-text">No charge until launch</span></div>
+          <div class="trust-item"><span>↩️</span><span class="trust-text">Cancel anytime</span></div>
+          <div class="trust-item"><span>🏪</span><span class="trust-text">Works with Kroger &amp; Instacart</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1rem;">
+        <div class="footer-brand">
+          <div class="footer-brand-icon">N</div>
+          <span class="footer-brand-name font-display">NutriCart</span>
+        </div>
+        <nav class="footer-nav">
+          <a href="#features">Features</a>
+          <span class="footer-sep">·</span>
+          <a href="#how-it-works">How it works</a>
+          <span class="footer-sep">·</span>
+          <a href="#waitlist">Pricing</a>
+          <span class="footer-sep">·</span>
+          <a href="#">Privacy</a>
+          <span class="footer-sep">·</span>
+          <a href="#">Terms</a>
+        </nav>
+      </div>
+      <div class="footer-right">
+        <div class="social-links">
+          <a href="#" class="social-link" aria-label="Twitter">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="#" class="social-link" aria-label="Instagram">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+          </a>
+        </div>
+        <span class="footer-copy">© 2026 NutriCart</span>
+      </div>
+    </div>
+    <p class="footer-disclaimer">You won't be charged today. We'll email you when we launch. · NutriCart is not affiliated with Instacart or Kroger.</p>
+  </div>
+</footer>
+
+<script>
+  // ── CONFIG ────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://ccickrqypwjrymdhnqcw.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjaWNrcnF5cHdqcnltZGhucWN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MzY5MjcsImV4cCI6MjA5MjIxMjkyN30.kd_t-Lr1hzc-T4AlDB2aP0MVIwj1kljLm4cZ_npW0Zc';
+
+  // ⚠️  Replace with your Stripe Payment Link URL after creating it in the Stripe dashboard
+  // Stripe dashboard → Products → Create Product ($5.99/mo recurring) → Create Payment Link
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/REPLACE_WITH_YOUR_PAYMENT_LINK';
+  // ─────────────────────────────────────────────────────────
+
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Scroll reveal
+  const revealEls = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  revealEls.forEach(el => observer.observe(el));
+
+  // Tabs
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.step-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const step = tab.dataset.step;
+      tabs.forEach(t => { t.classList.remove('active'); t.classList.add('inactive'); });
+      tab.classList.add('active'); tab.classList.remove('inactive');
+      panels.forEach(p => { p.classList.remove('active'); });
+      document.querySelector(`[data-panel="${step}"]`).classList.add('active');
+    });
+  });
+
+  // Free notify form → Supabase
+  document.getElementById('notify-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email = document.getElementById('notify-email').value.trim();
+    const btn = document.getElementById('notify-btn');
+    const msg = document.getElementById('notify-msg');
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const { error } = await supabase.from('waitlist').insert({ email: email.toLowerCase(), type: 'free' });
+
+    if (error && error.code === '23505') {
+      // Duplicate email — treat as success
+      btn.textContent = '✓ Already on the list!';
+    } else if (error) {
+      btn.textContent = 'Try again';
+      btn.disabled = false;
+      msg.textContent = 'Something went wrong. Please try again.';
+      msg.style.color = '#FCA5A5';
+      return;
+    } else {
+      btn.textContent = '✓ You\'re on the list!';
+    }
+
+    btn.style.background = 'rgba(255,255,255,0.2)';
+    document.getElementById('notify-email').disabled = true;
+    msg.textContent = 'We\'ll email you at launch. No charge until then.';
+  });
+
+  // Paid CTA buttons → Stripe Payment Link
+  function handlePaidCta(e) {
+    e.preventDefault();
+    if (STRIPE_PAYMENT_LINK.includes('REPLACE_WITH_YOUR_PAYMENT_LINK')) {
+      alert('Stripe Payment Link not configured yet.\n\nCreate one at: dashboard.stripe.com → Products → Payment Links');
+      return;
+    }
+    window.location.href = STRIPE_PAYMENT_LINK;
+  }
+
+  document.getElementById('waitlist-paid-cta').addEventListener('click', handlePaidCta);
+  document.getElementById('hero-paid-cta').addEventListener('click', function(e) {
+    // Hero button scrolls to waitlist section first, unless Stripe is configured
+    if (!STRIPE_PAYMENT_LINK.includes('REPLACE_WITH_YOUR_PAYMENT_LINK')) {
+      handlePaidCta(e);
+    }
+  });
+</script>
+</body>
+</html>
