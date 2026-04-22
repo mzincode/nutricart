@@ -1133,8 +1133,13 @@
     }
 
     btn.style.background = 'rgba(255,255,255,0.2)';
-    document.getElementById('notify-email').disabled = true;
     msg.textContent = 'We\'ll email you at launch. No charge until then.';
+    setTimeout(() => {
+      document.getElementById('notify-email').value = '';
+      btn.textContent = 'Notify me (free)';
+      btn.style.background = '';
+      btn.disabled = false;
+    }, 2500);
   });
 
   // Paid CTA buttons → Stripe Payment Link
