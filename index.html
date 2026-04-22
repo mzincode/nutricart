@@ -1078,7 +1078,7 @@
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/28E9AU0g47JS8B1c0odAk00';
   // ─────────────────────────────────────────────────────────
 
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) ?? null;
 
   // Scroll reveal
   const revealEls = document.querySelectorAll('.reveal');
@@ -1110,6 +1110,7 @@
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
+    if (!supabase) { btn.textContent = 'Try again'; btn.disabled = false; return; }
     const { error } = await supabase.from('waitlist').insert({ email: email.toLowerCase(), type: 'free' });
 
     if (error && error.code === '23505') {
