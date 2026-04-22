@@ -1014,7 +1014,7 @@
         </div>
 
         <div id="notify" class="notify-form">
-          <form id="notify-form" class="notify-row">
+          <form id="notify-form" class="notify-row" onsubmit="return false">
             <input id="notify-email" type="email" class="notify-input" placeholder="your@email.com" required/>
             <button type="submit" id="notify-btn" class="btn-notify">Notify me (free)</button>
           </form>
@@ -1110,7 +1110,13 @@
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    if (!supabase) { btn.textContent = 'Try again'; btn.disabled = false; return; }
+    if (!supabase) {
+      btn.textContent = 'Service unavailable — try again shortly';
+      btn.disabled = false;
+      msg.textContent = 'Could not connect to our signup service. Please refresh and try again.';
+      msg.style.color = '#FCA5A5';
+      return;
+    }
     const { error } = await supabase.from('waitlist').insert({ email: email.toLowerCase(), type: 'free' });
 
     if (error && error.code === '23505') {
@@ -1164,12 +1170,7 @@
   });
 
   document.getElementById('waitlist-paid-cta').addEventListener('click', handlePaidCta);
-  document.getElementById('hero-paid-cta').addEventListener('click', function(e) {
-    // Hero button scrolls to waitlist section first, unless Stripe is configured
-    if (!STRIPE_PAYMENT_LINK.includes('REPLACE_WITH_YOUR_PAYMENT_LINK')) {
-      handlePaidCta(e);
-    }
-  });
+  document.getElementById('hero-paid-cta').addEventListener('click', handlePaidCta);
 </script>
 </body>
 </html>
