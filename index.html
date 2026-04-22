@@ -1078,7 +1078,7 @@
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/28E9AU0g47JS8B1c0odAk00';
   // ─────────────────────────────────────────────────────────
 
-  const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) ?? null;
+  const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) ?? null;
 
   // Scroll reveal
   const revealEls = document.querySelectorAll('.reveal');
@@ -1110,14 +1110,14 @@
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
-    if (!supabase) {
+    if (!supabaseClient) {
       btn.textContent = 'Service unavailable — try again shortly';
       btn.disabled = false;
       msg.textContent = 'Could not connect to our signup service. Please refresh and try again.';
       msg.style.color = '#FCA5A5';
       return;
     }
-    const { error } = await supabase.from('waitlist').insert({ email: email.toLowerCase(), type: 'free' });
+    const { error } = await supabaseClient.from('waitlist').insert({ email: email.toLowerCase(), type: 'free' });
 
     if (error && error.code === '23505') {
       // Duplicate email — treat as success
