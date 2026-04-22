@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1174,8 +1175,70 @@
     });
   });
 
-  document.getElementById('waitlist-paid-cta').addEventListener('click', handlePaidCta);
-  document.getElementById('hero-paid-cta').addEventListener('click', handlePaidCta);
+  // Embedded Stripe Checkout
+  const STRIPE_PK = 'pk_live_51TFev1JKLg7yfbm4cxTfyjLAqEnC7pPJO60SKixtaJM5WKNNJgmyR67PFazELLYyCYeJrOvA3KojfkOg3ZPtvgwj00CgtlRuWb';
+  let stripeInstance = null;
+  let activeCheckout = null;
+
+  async function openEmbeddedCheckout(e) {
+    e.preventDefault();
+    const modal = document.getElementById('checkout-modal');
+    modal.style.display = 'flex';
+    document.getElementById('checkout-loading').style.display = 'block';
+    document.getElementById('checkout-embed').innerHTML = '';
+
+    if (activeCheckout) { activeCheckout.destroy(); activeCheckout = null; }
+    if (!stripeInstance) stripeInstance = Stripe(STRIPE_PK);
+
+    try {
+      activeCheckout = await stripeInstance.initEmbeddedCheckout({
+        fetchClientSecret: async () => {
+          const res = await fetch('/api/create-checkout-session', { method: 'POST' });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          return data.clientSecret;
+        }
+      });
+      document.getElementById('checkout-loading').style.display = 'none';
+      activeCheckout.mount('#checkout-embed');
+    } catch (err) {
+      document.getElementById('checkout-loading').textContent = 'Could not load checkout. Please try again.';
+    }
+  }
+
+  function closeCheckoutModal() {
+    if (activeCheckout) { activeCheckout.destroy(); activeCheckout = null; }
+    document.getElementById('checkout-modal').style.display = 'none';
+  }
+
+  document.getElementById('checkout-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeCheckoutModal();
+  });
+  document.getElementById('checkout-close-btn').addEventListener('click', closeCheckoutModal);
+
+  document.getElementById('waitlist-paid-cta').addEventListener('click', openEmbeddedCheckout);
+  document.getElementById('hero-paid-cta').addEventListener('click', openEmbeddedCheckout);
+
+  // Show success banner if returning from Stripe
+  if (new URLSearchParams(window.location.search).get('subscribed') === 'true') {
+    const banner = document.getElementById('success-banner');
+    if (banner) { banner.style.display = 'flex'; window.history.replaceState({}, '', '/'); }
+  }
 </script>
+
+<!-- Checkout Modal -->
+<div id="checkout-modal" style="display:none; position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.65); align-items:center; justify-content:center; padding:1rem;">
+  <div style="background:white; border-radius:1.5rem; width:100%; max-width:540px; max-height:92vh; overflow-y:auto; position:relative; padding:1.5rem;">
+    <button id="checkout-close-btn" style="position:absolute; top:1rem; right:1rem; width:32px; height:32px; border-radius:50%; border:1px solid #e5e7eb; background:white; cursor:pointer; font-size:1.1rem; line-height:1; display:flex; align-items:center; justify-content:center; z-index:1;">✕</button>
+    <p id="checkout-loading" style="text-align:center; padding:2rem; color:#6b7264; font-size:0.9rem;">Loading secure checkout…</p>
+    <div id="checkout-embed"></div>
+  </div>
+</div>
+
+<!-- Success Banner -->
+<div id="success-banner" style="display:none; position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%); background:#2D6A4F; color:white; padding:1rem 2rem; border-radius:9999px; font-weight:600; font-size:0.9rem; z-index:400; align-items:center; gap:0.75rem; box-shadow:0 8px 32px rgba(45,106,79,0.4);">
+  ✓ You're subscribed! Welcome to FoodFetch.
+</div>
+
 </body>
 </html>
