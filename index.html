@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>NutriCart — Macros + Groceries, Finally Together</title>
-  <meta name="description" content="NutriCart tracks your macros and micronutrients, then finds the cheapest products at your nearest store to hit your goals — all for $5.99/month."/>
+  <title>FoodFetch — Macros + Groceries, Finally Together</title>
+  <meta name="description" content="FoodFetch tracks your macros and micronutrients, then finds the cheapest products at your nearest store to hit your goals — all for $5.99/month."/>
+
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet"/>
@@ -68,7 +69,7 @@
       width: 32px; height: 32px; border-radius: 8px;
       background: var(--primary);
       display: flex; align-items: center; justify-content: center;
-      color: white; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 14px;
+      color: white; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px;
     }
     .nav-logo-text { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 1rem; color: var(--foreground); }
 
@@ -93,6 +94,32 @@
       align-items: center; justify-content: center;
       border-radius: 9999px; border: 1px solid var(--border);
       background: var(--card); cursor: pointer;
+    }
+
+    .mobile-menu {
+      display: none;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 0.75rem 1rem 1rem;
+      background: rgba(247,245,240,0.97);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 0 0 1.5rem 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      font-size: 1rem; font-weight: 500; color: var(--muted-foreground);
+      text-decoration: none; padding: 0.75rem 0.5rem;
+      border-bottom: 1px solid var(--border); transition: color 0.2s;
+    }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu a:hover { color: var(--foreground); }
+    .mobile-menu .mobile-cta {
+      margin-top: 0.5rem; text-align: center;
+      padding: 0.875rem; border-radius: 9999px;
+      background: var(--primary); color: var(--primary-foreground);
+      font-weight: 600; font-size: 0.9rem; border: none; cursor: pointer;
     }
 
     @media (max-width: 768px) {
@@ -540,7 +567,7 @@
     .footer-brand-icon {
       width: 28px; height: 28px; border-radius: 6px; background: var(--primary);
       display: flex; align-items: center; justify-content: center;
-      color: white; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 12px;
+      color: white; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px;
     }
     .footer-brand-name { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 1rem; }
 
@@ -596,8 +623,8 @@
 <header>
   <nav>
     <a class="nav-logo" href="#">
-      <div class="nav-logo-icon">N</div>
-      <span class="nav-logo-text">NutriCart</span>
+      <div class="nav-logo-icon">FF</div>
+      <span class="nav-logo-text">FoodFetch</span>
     </a>
     <div class="nav-links">
       <a href="#how-it-works">How it works</a>
@@ -605,10 +632,17 @@
       <a href="#waitlist">Pricing</a>
     </div>
     <a href="#waitlist" class="nav-cta desktop">Join Waitlist</a>
-    <button class="nav-mobile-btn" aria-label="Open menu">
-      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    <button class="nav-mobile-btn" id="mobile-menu-btn" aria-label="Open menu" aria-expanded="false">
+      <svg id="menu-icon" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <svg id="close-icon" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:none;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
   </nav>
+  <div class="mobile-menu" id="mobile-menu">
+    <a href="#how-it-works" class="mobile-nav-link">How it works</a>
+    <a href="#features" class="mobile-nav-link">Features</a>
+    <a href="#waitlist" class="mobile-nav-link">Pricing</a>
+    <a href="#waitlist" class="mobile-cta mobile-nav-link">Join Waitlist — $5.99/mo</a>
+  </div>
 </header>
 
 <!-- HERO -->
@@ -713,7 +747,7 @@
       <div class="problem-card reveal delay-1">
         <div class="problem-card-header">
           <span class="status-dot red"></span>
-          <span class="card-label">Before NutriCart</span>
+          <span class="card-label">Before FoodFetch</span>
         </div>
         <div>
           <div class="app-row">
@@ -739,7 +773,7 @@
         <div class="solution-card-blob"></div>
         <div class="solution-card-header">
           <span class="status-dot" style="background:var(--accent);"></span>
-          <span class="solution-label">With NutriCart</span>
+          <span class="solution-label">With FoodFetch</span>
         </div>
         <div class="solution-stat">
           <div class="solution-stat-row">
@@ -772,7 +806,7 @@
 <section id="features" class="features-section">
   <div class="container">
     <div class="text-center mb-12 reveal">
-      <span class="section-tag">What NutriCart Does</span>
+      <span class="section-tag">What FoodFetch Does</span>
       <h2 class="section-title">Three problems. <span class="italic-light" style="color:var(--primary);">One fix.</span></h2>
     </div>
     <div class="bento-grid">
@@ -784,7 +818,7 @@
         </div>
         <span class="bento-tag">Nutrient Gaps</span>
         <h3 class="bento-title font-display">See what you're missing — and exactly which product fixes it</h3>
-        <p class="bento-desc">NutriCart scans your daily log, identifies micronutrient shortfalls, and surfaces the cheapest in-stock product at your nearest Kroger or Costco to close the gap.</p>
+        <p class="bento-desc">FoodFetch scans your daily log, identifies micronutrient shortfalls, and surfaces the cheapest in-stock product at your nearest Kroger or Costco to close the gap.</p>
         <div style="flex:1;">
           <div class="nutrient-item">
             <div class="nutrient-header">
@@ -832,7 +866,7 @@
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
         <h3 class="bento-title font-display white">Set a weekly food budget. Hit your macros without blowing it.</h3>
-        <p class="bento-desc white">Tell NutriCart your weekly grocery budget. It builds meal plans that hit your protein, carb, and fat targets using the cheapest available products — no guesswork.</p>
+        <p class="bento-desc white">Tell FoodFetch your weekly grocery budget. It builds meal plans that hit your protein, carb, and fat targets using the cheapest available products — no guesswork.</p>
         <div class="budget-bar-wrap">
           <div class="budget-bar-top"><span>Weekly Budget</span><span>$85 / $90</span></div>
           <div class="budget-bar-bg"><div class="budget-bar-fill"></div></div>
@@ -847,7 +881,7 @@
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
         </div>
         <h3 class="bento-title font-display white">Push your grocery list to Instacart or Kroger in one tap</h3>
-        <p class="bento-desc white" style="flex:1;">No copying. No switching apps. Your NutriCart list goes directly to your cart — Instacart or Kroger, your choice.</p>
+        <p class="bento-desc white" style="flex:1;">No copying. No switching apps. Your FoodFetch list goes directly to your cart — Instacart or Kroger, your choice.</p>
         <div class="grocery-btns">
           <button class="grocery-btn white-btn">→ Instacart</button>
           <button class="grocery-btn outline-btn">→ Kroger</button>
@@ -876,7 +910,7 @@
       <div>
         <span class="step-number font-display">01</span>
         <h3 class="step-title font-display">Log your food — or import from Cronometer</h3>
-        <p class="step-desc">NutriCart reads your daily food log and calculates exactly which nutrients you're hitting and missing. No manual entry if you already use Cronometer.</p>
+        <p class="step-desc">FoodFetch reads your daily food log and calculates exactly which nutrients you're hitting and missing. No manual entry if you already use Cronometer.</p>
       </div>
       <div>
         <div class="food-log">
@@ -903,7 +937,7 @@
       <div>
         <span class="step-number font-display">02</span>
         <h3 class="step-title font-display">Match gaps to the cheapest products near you</h3>
-        <p class="step-desc">NutriCart scans real-time inventory at Kroger and Costco near you, then finds the most cost-effective product to fill each nutrient gap in your log.</p>
+        <p class="step-desc">FoodFetch scans real-time inventory at Kroger and Costco near you, then finds the most cost-effective product to fill each nutrient gap in your log.</p>
       </div>
       <div>
         <div class="food-log">
@@ -1003,8 +1037,8 @@
     <div class="footer-top">
       <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1rem;">
         <div class="footer-brand">
-          <div class="footer-brand-icon">N</div>
-          <span class="footer-brand-name font-display">NutriCart</span>
+          <div class="footer-brand-icon">FF</div>
+          <span class="footer-brand-name font-display">FoodFetch</span>
         </div>
         <nav class="footer-nav">
           <a href="#features">Features</a>
@@ -1027,10 +1061,10 @@
             <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
           </a>
         </div>
-        <span class="footer-copy">© 2026 NutriCart</span>
+        <span class="footer-copy">© 2026 FoodFetch</span>
       </div>
     </div>
-    <p class="footer-disclaimer">You won't be charged today. We'll email you when we launch. · NutriCart is not affiliated with Instacart or Kroger.</p>
+    <p class="footer-disclaimer">You won't be charged today. We'll email you when we launch. · FoodFetch is not affiliated with Instacart or Kroger.</p>
   </div>
 </footer>
 
@@ -1041,7 +1075,7 @@
 
   // ⚠️  Replace with your Stripe Payment Link URL after creating it in the Stripe dashboard
   // Stripe dashboard → Products → Create Product ($5.99/mo recurring) → Create Payment Link
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/REPLACE_WITH_YOUR_PAYMENT_LINK';
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/28E9AU0g47JS8B1c0odAk00';
   // ─────────────────────────────────────────────────────────
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1105,6 +1139,28 @@
     }
     window.location.href = STRIPE_PAYMENT_LINK;
   }
+
+  // Mobile menu toggle
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const menuIcon = document.getElementById('menu-icon');
+  const closeIcon = document.getElementById('close-icon');
+
+  mobileMenuBtn.addEventListener('click', () => {
+    const isOpen = mobileMenu.classList.toggle('open');
+    mobileMenuBtn.setAttribute('aria-expanded', isOpen);
+    menuIcon.style.display = isOpen ? 'none' : 'block';
+    closeIcon.style.display = isOpen ? 'block' : 'none';
+  });
+
+  document.querySelectorAll('.mobile-nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      mobileMenu.classList.remove('open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+      menuIcon.style.display = 'block';
+      closeIcon.style.display = 'none';
+    });
+  });
 
   document.getElementById('waitlist-paid-cta').addEventListener('click', handlePaidCta);
   document.getElementById('hero-paid-cta').addEventListener('click', function(e) {
